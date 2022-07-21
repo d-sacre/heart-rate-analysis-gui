@@ -18,27 +18,27 @@ class App(tk.Frame):
         self.folder_pathGUI = tk.StringVar()
 
         _row=0
-        self.filepathDescriptionLabel = tk.Label(self,text="1) Open the heart rate raw data file at location ...",font = "Default 10 bold").grid(row=_row,column=0,columnspan=2,sticky="w",padx=10)
+        self.filepathDescriptionLabel, self.filepathEntry, self.importFilepathButton, _row = self.descriptionEntryFieldButtonTemplate(_row,"1) Open the heart rate raw data file at location ...",self.file_pathGUI,'Open',self.openFiledialog)
 
         _row+=1
-        self.filepathEntry = tk.Entry(self, width=75).grid(row=_row,column=0,columnspan=2,ipady=4,padx=10)
-        self.importFilepathButton = tk.Button(self, text='Open', width=6, command=self.openFiledialog).grid(row=_row,column=2)
+        self.exportPathDescriptionLabel, self.exportPathEntry, self.importFilepathButton, _row = self.descriptionEntryFieldButtonTemplate(_row, "2) Select the export directory ...",self.folder_pathGUI,'Select',self.openFolderdialog)
 
         _row+=1
-        self.filepathDescriptionLabel = tk.Label(self,text="2) Select the export directory ...",font = "Default 10 bold").grid(row=_row,column=0,columnspan=2,sticky="w",padx=10)
-
-        _row+=1
-        self.exportPathEntry = tk.Entry(self, width=75).grid(row=_row,column=0,columnspan=2,ipady=4,padx=10)
-        self.importFilepathButton = tk.Button(self, text='Select', width=6, command=self.openFolderdialog).grid(row=_row,column=2)
-
-        _row+=1
-        self.filepathDescriptionLabel = tk.Label(self,text="Warning: Already existing heart rate analysis data in the specified export directory will be overwriten!",font = "Default 7").grid(row=_row,column=0,columnspan=2,sticky="w",padx=10)
+        self.exportPathWarningLabel = tk.Label(self,text="Warning: Already existing heart rate analysis data in the specified export directory will be overwriten!",font = "Default 7").grid(row=_row,column=0,columnspan=2,sticky="w",padx=10)
 
         _row+=1
         self.analysisButton = tk.Button(self, text='Run Analysis', width=25, command=self.runAnalysis).grid(row=_row,column=0, pady=10)
         self.exitButton = tk.Button(self, text='Quit', width=25, command=self.quit_me).grid(row=_row,column=1, pady=10)
 
+    # Templates
+    def descriptionEntryFieldButtonTemplate(self,row,labelText,entryFieldTextvar,buttonText,buttonFunction):
+        _label = tk.Label(self,text=labelText,font = "Default 10 bold").grid(row=row,column=0,columnspan=2,sticky="w",padx=10)
 
+        row+=1
+        _entryField = tk.Entry(self, width=75,textvariable=entryFieldTextvar,state='disabled').grid(row=row,column=0,columnspan=2,ipady=4,padx=10)
+        _button = tk.Button(self, text=buttonText, width=6, command=buttonFunction).grid(row=row,column=2)
+
+        return _label, _entryField, _button, row
 
     # function to automatically end Python process after Tkinter GUI is closed
     def quit_me(self):
