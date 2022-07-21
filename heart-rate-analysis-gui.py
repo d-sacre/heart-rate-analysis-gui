@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 
+import modules.complete_processing_module as cpm
+
 class App(tk.Frame):
     def __init__(self, master):
         super().__init__(master)
@@ -30,6 +32,12 @@ class App(tk.Frame):
         self.analysisButton = tk.Button(self, text='Run Analysis', width=25, command=self.runAnalysis).grid(row=_row,column=0, pady=10)
         self.exitButton = tk.Button(self, text='Quit', width=25, command=self.quit_me).grid(row=_row,column=1, pady=10)
 
+        # _row+=1
+        # self.logLabel = tk.Label(self, text="Program Log",font = "Default 10 bold").grid(row=_row,column=0, columnspan=2,sticky="w",padx=10)
+
+        # _row+=1
+        # self.logText = tk.Text(self, width = 75, height=15,state='disabled').grid(row = _row, column = 0, columnspan = 2)
+
     # Templates
     def descriptionEntryFieldButtonTemplate(self,row,labelText,entryFieldTextvar,buttonText,buttonFunction):
         _label = tk.Label(self,text=labelText,font = "Default 10 bold").grid(row=row,column=0,columnspan=2,sticky="w",padx=10)
@@ -48,25 +56,17 @@ class App(tk.Frame):
     def openFiledialog(self):
         root = tk.Tk()
         root.withdraw()
-        self.import_filepath = filedialog.askopenfilename()
+        self.import_filepath = filedialog.askopenfilename(title = "Select the heart rate data file ...",filetypes = (("CSV Files","*.csv"),))
         self.file_pathGUI.set(self.import_filepath)
         
     def openFolderdialog(self):
         root = tk.Tk()
         root.withdraw()
-        self.export_directory = filedialog.askdirectory()
+        self.export_directory = filedialog.askdirectory(title = "Select the export directory ...")
         self.folder_pathGUI.set(self.export_directory)
 
     def runAnalysis(self):
-        pass
-        # Does not work due to issues of loading modules from subfolder
-        # _commandString = "python /home/mane/github/d-sacre/heart-rate-analysis/heart-rate-analysis-cli/heart-rate-analysis-cli.py -i " 
-        # _commandString += self.import_filepath + " -o " + self.export_directory
-        # os.system(_commandString)
-
-
-        # print(self.import_filepath, self.export_directory)
-        
+        cpm.dataProcessingExportingAndPlotting(self.import_filepath,self.export_directory+"/")        
 
 root = tk.Tk()
 myapp = App(root)

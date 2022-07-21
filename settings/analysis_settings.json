@@ -1,0 +1,12 @@
+{
+    "import": 
+    {
+        "filepath": "test-data_withings-style.csv",
+        "datatype": "csv",
+        "dataformat": "withings"
+    },
+    "export":
+    {
+        "directory": "/home/mane/cli-test/"
+    }
+}
