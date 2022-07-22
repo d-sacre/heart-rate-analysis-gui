@@ -1,6 +1,12 @@
 import tkinter as tk
 from tkinter import filedialog
 import os
+import sys
+
+# source: https://stackoverflow.com/questions/739993/how-do-i-get-a-list-of-locally-installed-python-modules
+import pkg_resources
+installed_packages = {d.project_name: d.version for d in pkg_resources.working_set}
+
 
 import modules.complete_processing_module as cpm
 
@@ -13,8 +19,14 @@ class App(tk.Frame):
         master.protocol("WM_DELETE_WINDOW", self.quit_me) 
         self.pack()
 
+        self.requiredPythonVersion = (3,10,0)
+        self.required_standardPackages = ['pkg_resources','tkinter','os','sys','datetime','csv','json']
+        self.required_nonStandardPackages = ['scipy','numpy','matplotlib']
+        self.generalLogWarningsAndErrors = {"fatal": "\n\n=> A FATAL ERROR occured; no data/plots were exported!"}
+
         self.import_filepath = ""
         self.export_directory= ""
+        self.logText = ""
 
         self.file_pathGUI = tk.StringVar()
         self.folder_pathGUI = tk.StringVar()
@@ -32,11 +44,14 @@ class App(tk.Frame):
         self.analysisButton = tk.Button(self, text='Run Analysis', width=25, command=self.runAnalysis).grid(row=_row,column=0, pady=10)
         self.exitButton = tk.Button(self, text='Quit', width=25, command=self.quit_me).grid(row=_row,column=1, pady=10)
 
-        # _row+=1
-        # self.logLabel = tk.Label(self, text="Program Log",font = "Default 10 bold").grid(row=_row,column=0, columnspan=2,sticky="w",padx=10)
+        _row+=1
+        self.logLabel = tk.Label(self, text="Program Log",font = "Default 10 bold").grid(row=_row,column=0, columnspan=2,sticky="w",padx=10)
 
-        # _row+=1
-        # self.logText = tk.Text(self, width = 75, height=15,state='disabled').grid(row = _row, column = 0, columnspan = 2)
+        _row+=1
+        self.logTextGUI = tk.StringVar()
+        self.logTextLabel = tk.Label(self, width = 75, height=15,textvariable=self.logTextGUI, anchor="nw", justify=tk.LEFT).grid(row = _row, column = 0, columnspan = 2, padx=10)
+
+
 
     # Templates
     def descriptionEntryFieldButtonTemplate(self,row,labelText,entryFieldTextvar,buttonText,buttonFunction):
@@ -65,8 +80,55 @@ class App(tk.Frame):
         self.export_directory = filedialog.askdirectory(title = "Select the export directory ...")
         self.folder_pathGUI.set(self.export_directory)
 
+    def updateProgramLogGUI(self,old,add,log):
+        _update = old + add
+        log.set(_update)
+
+        return _update
+
     def runAnalysis(self):
-        cpm.dataProcessingExportingAndPlotting(self.import_filepath,self.export_directory+"/")        
+        self.logText = self.updateProgramLogGUI(self.logText,"Starting Analysis Routine ...",self.logTextGUI)
+        self.logText = self.updateProgramLogGUI(self.logText,"\n\t(1) Verification Phase ...",self.logTextGUI)
+        self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Python Version ... ",self.logTextGUI)
+
+        # Check for Python version
+        if sys.version_info >= self.requiredPythonVersion: 
+            self.logText = self.updateProgramLogGUI(self.logText,"OK",self.logTextGUI)
+            self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Required Non-Standard Python Modules ... ",self.logTextGUI)
+
+            # Check whether all the required modules are installed
+            _lenRequiredModules = len(self.required_nonStandardPackages)
+            _verifiedModules = []
+            _missingModules = []
+
+            for key in self.required_nonStandardPackages:
+                if key in installed_packages:
+                    _verifiedModules.append(key)
+                    # _missingModules.append(key) # debug only
+                else:
+                    _missingModules.append(key)
+            
+            if _lenRequiredModules == len(_verifiedModules):
+                self.logText = self.updateProgramLogGUI(self.logText,"OK",self.logTextGUI)
+                cpm.dataProcessingExportingAndPlotting(self.import_filepath,self.export_directory+"/")
+            else:
+                self.logText = self.updateProgramLogGUI(self.logText,"FATAL ERROR",self.logTextGUI)
+                _errorString = "FATAL ERROR: Not all the required Python modules are installed on the system."
+                _errorString += "\n\t          The following modules are missing:"
+
+                for element in _missingModules:
+                    _errorString += "\n\t\t" + element
+
+                _errorString += "\n\t          To prevent any problems, the analysis was aborted."
+                _errorString += self.generalLogWarningsAndErrors["fatal"]
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\n"+_errorString,self.logTextGUI)
+        else:
+            self.logText = self.updateProgramLogGUI(self.logText,"FATAL ERROR",self.logTextGUI)
+            _errorString = "FATAL ERROR: The detected Python installation is version " + str(sys.version_info[0]) + "." + str(sys.version_info[1]) + "."
+            _errorString += "\n\t          This program requires Python " + str(self.requiredPythonVersion[0]) + "." + str(self.requiredPythonVersion[1])+ " or higher to function properly."
+            _errorString += "\n\t          To prevent any problems, the analysis was aborted."
+            _errorString += self.generalLogWarningsAndErrors["fatal"]
+            self.logText = self.updateProgramLogGUI(self.logText,"\n\n"+_errorString,self.logTextGUI)   
 
 root = tk.Tk()
 myapp = App(root)
@@ -77,7 +139,6 @@ myapp.master.iconphoto(False, tk.PhotoImage(file='./img/heart-rate-analysis_icon
 myapp.master.minsize(640, 480)
 myapp.master.maxsize(640, 480)
 # myapp.master.maxsize(1920, 1080)
-
 
 myapp.mainloop()
 
