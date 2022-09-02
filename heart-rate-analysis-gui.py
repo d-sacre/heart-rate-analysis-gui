@@ -1,7 +1,12 @@
 import tkinter as tk
 from tkinter import filedialog
+from tkinter.ttk import Progressbar
 import os
 import sys
+
+import threading
+import time
+from datetime import datetime
 
 # source: https://stackoverflow.com/questions/739993/how-do-i-get-a-list-of-locally-installed-python-modules
 import pkg_resources
@@ -24,9 +29,12 @@ class App(tk.Frame):
         self.required_nonStandardPackages = ['scipy','numpy','matplotlib']
         self.generalLogWarningsAndErrors = {"fatal": "\n\n=> A FATAL ERROR occured; no data/plots were exported!"}
 
+        self.programStatus = {"pythonVersion": 0, "nonStandardPackagesAvailable": 0}
+
         self.import_filepath = ""
         self.export_directory= ""
         self.logText = ""
+ 
 
         self.file_pathGUI = tk.StringVar()
         self.folder_pathGUI = tk.StringVar()
@@ -44,6 +52,10 @@ class App(tk.Frame):
         self.analysisButton = tk.Button(self, text='Run Analysis', width=25, command=self.runAnalysis).grid(row=_row,column=0, pady=10)
         self.exitButton = tk.Button(self, text='Quit', width=25, command=self.quit_me).grid(row=_row,column=1, pady=10)
 
+        _row+=1
+        self.runningLabel = tk.Label(self,text="Processing")
+        self.progress = Progressbar(self, orient='horizontal', length=150, mode='indeterminate')
+        
         _row+=1
         self.logLabel = tk.Label(self, text="Program Log",font = "Default 10 bold").grid(row=_row,column=0, columnspan=2,sticky="w",padx=10)
 
@@ -86,55 +98,127 @@ class App(tk.Frame):
 
         return _update
 
+    def stopAndHideProgress(self):
+        self.progress.stop()
+        self.progress.grid_forget()
+        self.runningLabel.grid_forget()
+
     def runAnalysis(self):
-        self.logText = self.updateProgramLogGUI(self.logText,"Starting Analysis Routine ...",self.logTextGUI)
+        # self.analysisButton['state']='disabled'
+        self.runningLabel.grid(row=6,column=0,sticky="w",padx=10)
+        self.progress.grid(row=6,column=0,padx=10, sticky="e") # has to be set here; if grid placement in init, progress bar object no recognized
+        self.progress.start()
+
+        # Log text
+        self.logText = ""
+        self.analysisStartTime = datetime.utcnow()
+        print(self.analysisStartTime)
+        self.logText = self.updateProgramLogGUI(self.logText,"=> Starting Analysis Routine @"+ self.analysisStartTime.strftime("%m/%d/%Y, %H:%M:%S") +" UTC ...",self.logTextGUI)
         self.logText = self.updateProgramLogGUI(self.logText,"\n\t(1) Verification Phase ...",self.logTextGUI)
         self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Python Version ... ",self.logTextGUI)
 
-        # Check for Python version
-        if sys.version_info >= self.requiredPythonVersion: 
-            self.logText = self.updateProgramLogGUI(self.logText,"OK",self.logTextGUI)
-            self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Required Non-Standard Python Modules ... ",self.logTextGUI)
+        def checkPythonVersion():
+            print(self.programStatus)
 
-            # Check whether all the required modules are installed
-            _lenRequiredModules = len(self.required_nonStandardPackages)
-            _verifiedModules = []
-            _missingModules = []
-
-            for key in self.required_nonStandardPackages:
-                if key in installed_packages:
-                    _verifiedModules.append(key)
-                    # _missingModules.append(key) # debug only
-                else:
-                    _missingModules.append(key)
-            
-            if _lenRequiredModules == len(_verifiedModules):
+            # Check for Python Version:
+            if sys.version_info >= self.requiredPythonVersion:
+                self.programStatus["pythonVersion"] = 1
                 self.logText = self.updateProgramLogGUI(self.logText,"OK",self.logTextGUI)
-                cpm.dataProcessingExportingAndPlotting(self.import_filepath,self.export_directory+"/")
             else:
+                self.stopAndHideProgress()
                 self.logText = self.updateProgramLogGUI(self.logText,"FATAL ERROR",self.logTextGUI)
-                _errorString = "FATAL ERROR: Not all the required Python modules are installed on the system."
-                _errorString += "\n\t          The following modules are missing:"
-
-                for element in _missingModules:
-                    _errorString += "\n\t\t" + element
-
+                _errorString = "FATAL ERROR: The detected Python installation is version " + str(sys.version_info[0]) + "." + str(sys.version_info[1]) + "."
+                _errorString += "\n\t          This program requires Python " + str(self.requiredPythonVersion[0]) + "." + str(self.requiredPythonVersion[1])+ " or higher to function properly."
                 _errorString += "\n\t          To prevent any problems, the analysis was aborted."
                 _errorString += self.generalLogWarningsAndErrors["fatal"]
                 self.logText = self.updateProgramLogGUI(self.logText,"\n\n"+_errorString,self.logTextGUI)
-        else:
-            self.logText = self.updateProgramLogGUI(self.logText,"FATAL ERROR",self.logTextGUI)
-            _errorString = "FATAL ERROR: The detected Python installation is version " + str(sys.version_info[0]) + "." + str(sys.version_info[1]) + "."
-            _errorString += "\n\t          This program requires Python " + str(self.requiredPythonVersion[0]) + "." + str(self.requiredPythonVersion[1])+ " or higher to function properly."
-            _errorString += "\n\t          To prevent any problems, the analysis was aborted."
-            _errorString += self.generalLogWarningsAndErrors["fatal"]
-            self.logText = self.updateProgramLogGUI(self.logText,"\n\n"+_errorString,self.logTextGUI)   
+            
+            print(self.programStatus)
+
+            # Check whether all the required modules are installed
+            if self.programStatus["pythonVersion"] == 1:
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Required Non-Standard Python Modules ... ",self.logTextGUI)
+                
+                _lenRequiredModules = len(self.required_nonStandardPackages)
+                _verifiedModules = []
+                _missingModules = []
+
+                for key in self.required_nonStandardPackages:
+                    if key in installed_packages:
+                        _verifiedModules.append(key)
+                        # _missingModules.append(key) # debug only
+                    else:
+                        _missingModules.append(key)
+                
+                if _lenRequiredModules == len(_verifiedModules):
+                    self.programStatus["nonStandardPackagesAvailable"] = 1
+                    self.logText = self.updateProgramLogGUI(self.logText,"OK",self.logTextGUI)
+                    
+                else:
+                    self.stopAndHideProgress()
+                    self.logText = self.updateProgramLogGUI(self.logText,"FATAL ERROR",self.logTextGUI)
+                    _errorString = "FATAL ERROR: Not all the required Python modules are installed on the system."
+                    _errorString += "\n\t          The following modules are missing:"
+
+                    for element in _missingModules:
+                        _errorString += "\n\t\t" + element
+
+                    _errorString += "\n\t          To prevent any problems, the analysis was aborted."
+                    _errorString += self.generalLogWarningsAndErrors["fatal"]
+                    self.logText = self.updateProgramLogGUI(self.logText,"\n\n"+_errorString,self.logTextGUI)
+
+                print(self.programStatus)
+
+            _keys = self.programStatus.keys()
+            _len = len(_keys)
+            _sum = 0
+            
+            for _key in _keys:
+                _sum += self.programStatus[_key]
+
+            if _sum == _len:
+                # cpm.dataProcessingExportingAndPlotting(self.import_filepath,self.export_directory+"/") 
+
+                # Loading settings/data
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t(2) Processing Phase ...",self.logTextGUI)
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Loading Settings ... ",self.logTextGUI)
+                settings = cpm.loadSettings("./settings/analysis_settings.json",self.import_filepath,self.export_directory+"/")
+
+                # Loading/preprocessing data
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Loading and Preprocessing Data ... ",self.logTextGUI)
+                completeRawDataDictionary = cpm.loadParseAndPreprocessData(settings)
+                
+                # Analyzing data 
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Analyzing Data ... ",self.logTextGUI)
+                heartRateDataDailyAnalysis, heartRateDataDailyExtrema = cpm.runDataAnalysis(completeRawDataDictionary)
+
+                # Export phase
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t(3) Exporting Phase ...",self.logTextGUI)
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Preparing Data for Export ... ",self.logTextGUI)
+                date, minimum, average, maximum, completeRawData24hPlotArray, exportPaths = cpm.prepareExport(heartRateDataDailyAnalysis,completeRawDataDictionary,settings)
+
+                self.logText = self.updateProgramLogGUI(self.logText,"\n\t\t-> Exporting Plots ... ",self.logTextGUI)
+                cpm.exportPlots(completeRawData24hPlotArray,date, minimum, maximum,heartRateDataDailyAnalysis,exportPaths)
+
+                self.stopAndHideProgress()
+                self.analysisEndTime = datetime.utcnow()
+                self.analysisRuntime = self.analysisEndTime - self.analysisStartTime
+                _analysisRuntimeFloat = self.analysisRuntime.total_seconds()
+                self.logText = self.updateProgramLogGUI(self.logText,"\n=> The program finished with no errors @"+ self.analysisEndTime.strftime("%m/%d/%Y, %H:%M:%S") +" UTC after "+ "{0:.2f}".format(_analysisRuntimeFloat) + " second(s).\n=> All data/plots were successfully exported!\n     You may now close the program or start another analysis.",self.logTextGUI)
+
+        checkPythonVersionThread = threading.Thread(target=checkPythonVersion)
+        checkPythonVersionThread.daemon = True
+        checkPythonVersionThread.start()
+
+
+
+        
 
 root = tk.Tk()
 myapp = App(root)
 # here are method calls to the window manager class
 #
-myapp.master.title("Heart Rate Analysis GUI (alpha-2022-07-21)")
+myapp.master.title("Heart Rate Analysis GUI (alpha-2022-09-02)")
 myapp.master.iconphoto(False, tk.PhotoImage(file='./img/heart-rate-analysis_icon.png'))
 myapp.master.minsize(640, 480)
 myapp.master.maxsize(640, 480)

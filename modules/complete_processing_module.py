@@ -6,6 +6,40 @@ import modules.convert as convert
 import modules.data_analysis as analysis
 import modules.plotter_matplotlib as plot
 
+def loadSettings(filepath,FILE,EFOLDER):
+    settings = fio.loadSettingsJSON(filepath)
+
+    if FILE!="" and EFOLDER != "":
+        settings["import"]["filepath"] = FILE
+        settings["export"]["directory"] = EFOLDER
+
+    return settings
+
+def loadParseAndPreprocessData(settings):
+    _importedData = fio.loadFile(settings["import"]["filepath"],settings["import"]["datatype"])
+    _rawDataStandardized = parsing.formatDataToStandard(_importedData,settings["import"]["datatype"],settings["import"]["dataformat"])
+    _completeRawDataDictionary = convert.ArrayToDict(_rawDataStandardized)
+
+    return _completeRawDataDictionary
+
+def runDataAnalysis(dict):
+    _heartRateDataDailyAnalysis, _heartRateDataDailyExtrema = analysis.heartRate_minMaxAvg(dict)
+    return _heartRateDataDailyAnalysis, _heartRateDataDailyExtrema
+
+def prepareExport(dailyAnalysis,dict,settings):
+    _date, _minimum, _average, _maximum = convert.DictToPlotArray(dailyAnalysis) 
+    _completeRawData24hPlotArray = convert.DictTo24hPlotArray(dict)
+
+    # Init export folders
+    _exportPaths = fio.createPlotAndDataExportFileStructure(settings["export"]["directory"])
+
+    return _date, _minimum, _average, _maximum, _completeRawData24hPlotArray, _exportPaths
+
+def exportPlots(completeRawData24hPlotArray,date, minimum, maximum,heartRateDataDailyAnalysis,exportPaths):
+    plot.plotHeartRate24hForAllDays(completeRawData24hPlotArray,exportPaths["singleDays"])
+    plot.plotHeartRateExtremaOverHoursOfDay(date, minimum, maximum, exportPaths["minMax"])
+    plot.generateAndPlotMonthlyHeartRateTendency(heartRateDataDailyAnalysis,exportPaths["monthlyTendency"])
+
 def dataProcessingExportingAndPlotting(FILE,EFOLDER):
     
     print("Loading settings")
