@@ -77,6 +77,7 @@ class App(tk.Frame):
 
     # function to automatically end Python process after Tkinter GUI is closed
     def quit_me(self):
+        #self.checkPythonVersionThread.join() # for testing
         self.master.quit()
         self.master.destroy()
     
@@ -103,6 +104,7 @@ class App(tk.Frame):
         self.progress.grid_forget()
         self.runningLabel.grid_forget()
 
+    
     def runAnalysis(self):
         # self.analysisButton['state']='disabled'
         self.runningLabel.grid(row=6,column=0,sticky="w",padx=10)
@@ -205,12 +207,13 @@ class App(tk.Frame):
                 self.analysisRuntime = self.analysisEndTime - self.analysisStartTime
                 _analysisRuntimeFloat = self.analysisRuntime.total_seconds()
                 self.logText = self.updateProgramLogGUI(self.logText,"\n=> The program finished with no errors @"+ self.analysisEndTime.strftime("%m/%d/%Y, %H:%M:%S") +" UTC after "+ "{0:.2f}".format(_analysisRuntimeFloat) + " second(s).\n=> All data/plots were successfully exported!\n     You may now close the program or start another analysis.",self.logTextGUI)
+                print("test thread print")
 
-        checkPythonVersionThread = threading.Thread(target=checkPythonVersion)
-        checkPythonVersionThread.daemon = True
-        checkPythonVersionThread.start()
+        self.checkPythonVersionThread = threading.Thread(target=checkPythonVersion)
+        self.checkPythonVersionThread.daemon = True
+        self.checkPythonVersionThread.start()
 
-
+        print("standard")
 
         
 
@@ -225,4 +228,7 @@ myapp.master.maxsize(640, 480)
 # myapp.master.maxsize(1920, 1080)
 
 myapp.mainloop()
+
+# Known issues:
+# opening/closing new sub-windows increases RAM -> no freeing of memory after closing of tkinter subwindows
 
