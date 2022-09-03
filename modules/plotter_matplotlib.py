@@ -47,6 +47,7 @@ def plotHeartRate24hForAllDays(dataARRAY,exportPath):
                 plt.grid(showGrid)
                 plt.title("Heart rate during " + _date)
                 plt.savefig(exportPath + "heart-rate_" + _date +".pdf")
+                fig.clf()
                 # fig.clear()
                 # plt.close(fig)
     fig.clear() # clear figure in hope to reduce amount of memory leak/overhead
@@ -128,6 +129,7 @@ def generateAndPlotMonthlyHeartRateTendency(dataDICT,exportPath): # plot data fo
                 plt.xticks(rotation=45)
                 plt.title("Daily extrema and average of heart rate from " + _startDate + " to " + _endDate)
                 plt.savefig(exportPath + "heart-rate_tendency_" + _startDate + "_" + _endDate + ".pdf")
+                fig.clf()
                 
     fig.clear() # clear figure in hope to reduce amount of memory leak/overhead
     plt.close(fig) # required for preventing threading issue
